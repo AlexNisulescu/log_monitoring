@@ -46,8 +46,9 @@ def generate_report(merged_df):
         minutes = (total_seconds % 3600) // 60
         seconds = total_seconds % 60
         formatted_duration = f"{hours:02}:{minutes:02}:{seconds:02}"
-
+        # Report message
         msg = f"Job {row['id']} ({row['description_start']}): Duration = {formatted_duration}"
+        # Append the warning/error message
         if log_level:
             msg += f" [{log_level}: Duration exceeds {5 if log_level == 'WARNING' else 10} minutes!]"
         report.append(msg)
@@ -58,5 +59,10 @@ if __name__ == "__main__":
     duration_df = calculate_duration(logs)
     report = generate_report(duration_df)
 
-    for line in report:
-        print(line)
+    # Write the warnings and errors to warnings.log and errors.log files
+    with open('warnings.log', 'w') as warning_file, open('errors.log', 'w') as error_file:
+        for line in report:
+            if '[WARNING:' in line:
+                warning_file.write(line + '\n')
+            elif '[ERROR:' in line:
+                error_file.write(line + '\n')
