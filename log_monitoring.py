@@ -22,8 +22,41 @@ def calculate_duration(logs):
     merged = pd.merge(starts, ends, on='id', suffixes=('_start', '_end'))
     # Add the duration to the df
     merged['duration'] = merged['time_end'] - merged['time_start']
-    return merged[['id', 'description', 'time_start', 'time_end', 'duration']]
+    return merged[['id', 'description_start', 'time_start', 'time_end', 'duration']]
+
+# This function evaluates if the log should be a warning or an error
+def evaluate_duration(duration, threshold_warning=5, threshold_error=10):
+    minutes = duration.total_seconds() / 60
+    if minutes > threshold_error:
+        return 'ERROR'
+    elif minutes > threshold_warning:
+        return 'WARNING'
+    else:
+        return None
+
+# This function is used to generate the report
+def generate_report(merged_df):
+    report = []
+    for _, row in merged_df.iterrows():
+        log_level = evaluate_duration(row['duration'])
+
+        # Format duration as HH:MM:SS
+        total_seconds = int(row['duration'].total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+        formatted_duration = f"{hours:02}:{minutes:02}:{seconds:02}"
+
+        msg = f"Job {row['id']} ({row['description_start']}): Duration = {formatted_duration}"
+        if log_level:
+            msg += f" [{log_level}: Duration exceeds {5 if log_level == 'WARNING' else 10} minutes!]"
+        report.append(msg)
+    return report
 
 if __name__ == "__main__":
     logs = load_and_clean_log('logs.log')
     duration_df = calculate_duration(logs)
+    report = generate_report(duration_df)
+
+    for line in report:
+        print(line)
